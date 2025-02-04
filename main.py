@@ -18,7 +18,7 @@ import gzip
 import pathlib
 import contextlib
 import shutil
-from typing import Iterator
+from typing import Iterator, Callable
 from uuid import uuid4
 from dataclasses import dataclass
 
@@ -113,6 +113,7 @@ def download_and_extract_archive(url: str, target_path: str, archive_type: str) 
 class WithRepoContext:
     """Stores the context for a withrepo test."""
     root: str
+    tree: Iterator[tuple[str, str]]
 
 # @contextlib.contextmanager
 # def repo_context(params: dict) -> Iterator[ScopeContext]:
@@ -143,10 +144,13 @@ def cleanup(directory: str) -> None:
     if os.path.exists(directory):
         shutil.rmtree(directory)
 
+def tree(directory: str) -> Iterator[tuple[str, str]]:
+    for root, dirs, files in os.walk(directory, topdown=True):
+        # Yield full paths relative to the input directory
+        for file in files:
+            yield (root, os.path.relpath(os.path.join(root, file), directory))
+
 def repo_to_dir(url : str) -> str:
-    # user_home_dir = os.path.expanduser("~")
-    # scope_home_directory = str(pathlib.Path(user_home_dir, ".scope"))
-    # temp_extract_directory = str(pathlib.Path(scope_home_directory, uuid4().hex))
     temp_extract_directory = str(pathlib.Path(WITH_REPO_DIR, uuid4().hex))
     try:
         os.makedirs(temp_extract_directory, exist_ok=False)
@@ -169,7 +173,8 @@ def repo_from_url(url: str = "", commit: str = "") -> Iterator[WithRepoContext]:
         repo_zip_url = url + f"archive/{commit}.zip"
     try:
         source_directory_path = repo_to_dir(repo_zip_url)
-        yield WithRepoContext(source_directory_path)
+        tree_list = list(tree(source_directory_path))
+        yield WithRepoContext(source_directory_path, tree_list)
     finally:
         cleanup(source_directory_path)
 
@@ -181,6 +186,7 @@ def repo(user: str, repo: str, commit: str = "") -> Iterator[WithRepoContext]:
         repo_zip_url = f"https://github.com/{user}/{repo}/archive/{commit}.zip"
     try:
         source_directory_path = repo_to_dir(repo_zip_url)
-        yield WithRepoContext(source_directory_path)
+        tree_list = list(tree(source_directory_path))
+        yield WithRepoContext(source_directory_path, tree_list)
     finally:
         cleanup(source_directory_path)
