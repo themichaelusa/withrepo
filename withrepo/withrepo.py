@@ -22,6 +22,10 @@ from typing import Iterator, Callable
 from uuid import uuid4
 from dataclasses import dataclass
 
+# Local
+# TODO: when iterating over tree, offer option to split by language group (deals with monorepos quite well)
+from withrepo.utils import copy_and_split_root_by_language_group
+
 # Third party
 import requests
 
@@ -114,30 +118,6 @@ class WithRepoContext:
     """Stores the context for a withrepo test."""
     root: str
     tree: Iterator[tuple[str, str]]
-
-# @contextlib.contextmanager
-# def repo_context(params: dict) -> Iterator[ScopeContext]:
-#     """
-#     Creates a test context for the given parameters.
-#     """
-
-#     user_home_dir = os.path.expanduser("~")
-#     scope_home_directory = str(pathlib.Path(user_home_dir, ".scope"))
-#     temp_extract_directory = str(pathlib.Path(scope_home_directory, uuid4().hex))
-#     try:
-#         os.makedirs(temp_extract_directory, exist_ok=False)
-#         assert params["repo_url"].endswith("/")
-#         repo_zip_url = params["repo_url"] + f"archive/{params['repo_commit']}.zip"
-#         download_and_extract_archive(repo_zip_url, temp_extract_directory, "zip")
-#         dir_contents = os.listdir(temp_extract_directory)
-#         assert len(dir_contents) == 1
-#         source_directory_path = str(
-#             pathlib.Path(temp_extract_directory, dir_contents[0])
-#         )
-#         yield ScopeContext(source_directory_path)
-#     finally:
-#         if os.path.exists(temp_extract_directory):
-#             shutil.rmtree(temp_extract_directory)
 
 
 def cleanup(directory: str) -> None:
