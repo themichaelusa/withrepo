@@ -1,3 +1,3 @@
-from withrepo.withrepo import repo, repo_from_url, WithRepoContext
+from withrepo.withrepo import repo, WithRepoContext, RepoArguments, RepoProvider
 
-__all__ = ["repo", "repo_from_url", "WithRepoContext"]
+__all__ = ["repo", "WithRepoContext", "RepoArguments", "RepoProvider"]

@@ -18,6 +18,7 @@ import gzip
 import pathlib
 import contextlib
 import shutil
+from enum import Enum
 from typing import Iterator, Callable
 from uuid import uuid4
 from dataclasses import dataclass
@@ -33,6 +34,67 @@ import requests
 HOME_DIR = os.path.expanduser("~")
 WITH_REPO_DIR = str(pathlib.Path(HOME_DIR, ".withrepo"))
 
+# Dtos
+class RepoProvider(Enum):
+    GITHUB = "github"
+    GITLAB = "gitlab"
+    BITBUCKET = "bitbucket"
+
+PROVIDER_TO_URL_MAP = {
+    RepoProvider.GITHUB: "https://github.com",
+    RepoProvider.GITLAB: "https://gitlab.com",
+    RepoProvider.BITBUCKET: "https://bitbucket.org",
+}
+
+@dataclass
+class RepoArguments:
+    user: str = ""
+    repo: str = ""
+    commit: str = ""
+    url: str = ""
+    branch: str = ""
+    provider: RepoProvider = RepoProvider.GITHUB
+
+    def all_empty(self) -> bool:
+        return not any([self.user, self.repo, self.commit, self.url, self.branch])
+
+@dataclass
+class WithRepoContext:
+    """Stores the context for a withrepo test."""
+    path: str
+    url: str
+    user: str
+    repo: str
+    commit: str
+    branch: str
+    repo_url: str
+    provider: RepoProvider
+    tree: Callable[[], Iterator[tuple[str, str]]]
+
+    @classmethod
+    def from_args(cls, path: str, url: str, args: RepoArguments, tree: Callable[[], Iterator[tuple[str, str]]]):
+        return cls(
+            path=path,
+            url=url,
+            user=args.user,
+            repo=args.repo,
+            commit=args.commit,
+            branch=args.branch,
+            repo_url=args.url,
+            provider=args.provider,
+            tree=tree
+        )
+
+    def __str__(self):
+        return f"""WithRepoContext(
+            url={self.url},
+            user={self.user},
+            repo={self.repo},
+            commit={self.commit},
+            branch={self.branch},
+            provider={self.provider},
+            path={self.path}
+        )"""
 
 def read_file(file_path: str) -> str:
     """
@@ -113,18 +175,11 @@ def download_and_extract_archive(url: str, target_path: str, archive_type: str) 
                 pathlib.Path.unlink(pathlib.Path(tmp_file_name))
 
 
-@dataclass
-class WithRepoContext:
-    """Stores the context for a withrepo test."""
-    root: str
-    tree: Iterator[tuple[str, str]]
-
-
 def cleanup(directory: str) -> None:
     if os.path.exists(directory):
         shutil.rmtree(directory)
 
-def tree(directory: str) -> Iterator[tuple[str, str]]:
+def _tree(directory: str, monorepo: bool = False) -> Iterator[tuple[str, str]]:
     for root, dirs, files in os.walk(directory, topdown=True):
         # Yield full paths relative to the input directory
         for file in files:
@@ -145,28 +200,34 @@ def repo_to_dir(url : str) -> str:
     except Exception as e:
         raise Exception(f"Error extracting archive '{url}': {e}") from e
 
-@contextlib.contextmanager
-def repo_from_url(url: str = "", commit: str = "") -> Iterator[WithRepoContext]:
-    if not commit:
-        repo_zip_url = f"{url}/archive/HEAD.zip"
+def parse_repo_arguments_to_download_url(args: RepoArguments) -> str:
+    if args.all_empty():
+        raise Exception("Cannot parse repo() without arguments")
+    provider_url = PROVIDER_TO_URL_MAP[args.provider]
+    # at minimum, either url or (user, repo) must be provided
+    if args.url:
+        if not args.commit:
+            return f"{args.url}/archive/HEAD.zip"
+        else:
+            return f"{args.url}/archive/{args.commit}.zip"
+    elif args.user and args.repo:
+        if args.branch:
+            return f"{provider_url}/{args.user}/{args.repo}/archive/{args.branch}.zip"
+        elif args.commit:
+            return f"{provider_url}/{args.user}/{args.repo}/archive/{args.commit}.zip"
+        else:
+            return f"{provider_url}/{args.user}/{args.repo}/archive/HEAD.zip"
     else:
-        repo_zip_url = url + f"archive/{commit}.zip"
-    try:
-        source_directory_path = repo_to_dir(repo_zip_url)
-        tree_list = list(tree(source_directory_path))
-        yield WithRepoContext(source_directory_path, tree_list)
-    finally:
-        cleanup(source_directory_path)
+        raise Exception("Cannot parse repo() with given arguments")
 
 @contextlib.contextmanager
-def repo(user: str, repo: str, commit: str = "") -> Iterator[WithRepoContext]:
-    if not commit:
-        repo_zip_url = f"https://github.com/{user}/{repo}/archive/HEAD.zip"
-    else:
-        repo_zip_url = f"https://github.com/{user}/{repo}/archive/{commit}.zip"
+def repo(user: str, repo: str, commit: str = "", branch: str = "", url: str = "") -> Iterator[WithRepoContext]:
+    args = RepoArguments(user=user, repo=repo, commit=commit, branch=branch, url=url)
+    repo_zip_url = parse_repo_arguments_to_download_url(args)
     try:
         source_directory_path = repo_to_dir(repo_zip_url)
-        tree_list = list(tree(source_directory_path))
-        yield WithRepoContext(source_directory_path, tree_list)
+        def tree(monorepo: bool = False):
+            return _tree(source_directory_path, monorepo)
+        yield WithRepoContext.from_args(source_directory_path, repo_zip_url, args, tree)
     finally:
         cleanup(source_directory_path)
