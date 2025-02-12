@@ -24,7 +24,6 @@ from uuid import uuid4
 from dataclasses import dataclass
 
 # Local
-# TODO: when iterating over tree, offer option to split by language group (deals with monorepos quite well)
 from withrepo.utils import copy_and_split_root_by_language_group
 
 # Third party
@@ -69,10 +68,11 @@ class WithRepoContext:
     branch: str
     repo_url: str
     provider: RepoProvider
-    tree: Callable[[], Iterator[tuple[str, str]]]
+    tree: Callable[[bool], Iterator[tuple[str, str]]]
+    languages: list[str]
 
     @classmethod
-    def from_args(cls, path: str, url: str, args: RepoArguments, tree: Callable[[], Iterator[tuple[str, str]]]):
+    def from_args(cls, path: str, url: str, args: RepoArguments, tree: Callable[[bool], Iterator[tuple[str, str]]], languages: list[str]):
         return cls(
             path=path,
             url=url,
@@ -82,7 +82,8 @@ class WithRepoContext:
             branch=args.branch,
             repo_url=args.url,
             provider=args.provider,
-            tree=tree
+            tree=tree,
+            languages=languages
         )
 
     def __str__(self):
@@ -93,6 +94,7 @@ class WithRepoContext:
             commit={self.commit},
             branch={self.branch},
             provider={self.provider},
+            languages={self.languages},
             path={self.path}
         )"""
 
@@ -175,15 +177,25 @@ def download_and_extract_archive(url: str, target_path: str, archive_type: str) 
                 pathlib.Path.unlink(pathlib.Path(tmp_file_name))
 
 
-def cleanup(directory: str) -> None:
+def cleanup(directory: str, root_dirs: list[str]) -> None:
     if os.path.exists(directory):
         shutil.rmtree(directory)
+    for root_dir in root_dirs:
+        if os.path.exists(root_dir):
+            shutil.rmtree(root_dir)
 
-def _tree(directory: str, monorepo: bool = False) -> Iterator[tuple[str, str]]:
-    for root, dirs, files in os.walk(directory, topdown=True):
-        # Yield full paths relative to the input directory
-        for file in files:
-            yield (root, os.path.relpath(os.path.join(root, file), directory))
+def _tree(directory: str, multilang: bool = False, root_dirs: list[str] = []) -> Iterator[tuple[str, str]]:
+    if not multilang:
+        for root, dirs, files in os.walk(directory, topdown=True):
+            # Yield full paths relative to the input directory
+            for file in files:
+                yield (root, os.path.relpath(os.path.join(root, file), directory))
+    else:
+        for root_dir, language in root_dirs:
+            for root, dirs, files in os.walk(root_dir, topdown=True):
+                # Yield full paths relative to the input directory with the language
+                for file in files:
+                    yield (root, os.path.relpath(os.path.join(root, file), root_dir), language)
 
 def repo_to_dir(url : str) -> str:
     temp_extract_directory = str(pathlib.Path(WITH_REPO_DIR, uuid4().hex))
@@ -224,10 +236,14 @@ def parse_repo_arguments_to_download_url(args: RepoArguments) -> str:
 def repo(user: str, repo: str, commit: str = "", branch: str = "", url: str = "") -> Iterator[WithRepoContext]:
     args = RepoArguments(user=user, repo=repo, commit=commit, branch=branch, url=url)
     repo_zip_url = parse_repo_arguments_to_download_url(args)
-    try:
-        source_directory_path = repo_to_dir(repo_zip_url)
-        def tree(monorepo: bool = False):
-            return _tree(source_directory_path, monorepo)
-        yield WithRepoContext.from_args(source_directory_path, repo_zip_url, args, tree)
-    finally:
-        cleanup(source_directory_path)
+    source_directory_path = repo_to_dir(repo_zip_url)
+    root_dirs = copy_and_split_root_by_language_group(source_directory_path)
+    languages = list({language for _, language in root_dirs})
+
+    def tree(multilang: bool = False):
+        return _tree(source_directory_path, multilang, root_dirs)
+    
+    yield WithRepoContext.from_args(
+        source_directory_path, repo_zip_url, args, tree, languages
+    )
+    cleanup(source_directory_path, [dir for dir, _ in root_dirs])

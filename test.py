@@ -21,5 +21,5 @@ with repo("shobrook", "openlimit", commit="62e53478b98c1c3824d70895da9ef9eca87c4
 # Usage with a specific branch
 with repo("microsoft", "multilspy", branch="codeql") as r:
     print(r)
-    # for dir, file in r.tree():
-    #     print(dir, file)
+    for t in r.tree(multilang=True):
+        print(t)
