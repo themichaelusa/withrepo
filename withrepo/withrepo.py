@@ -19,7 +19,7 @@ import pathlib
 import contextlib
 import shutil
 from enum import Enum
-from typing import Iterator, Callable
+from typing import Iterator, Callable, Optional, Tuple, Union
 from uuid import uuid4
 from dataclasses import dataclass
 
@@ -57,37 +57,23 @@ class RepoArguments:
     def all_empty(self) -> bool:
         return not any([self.user, self.repo, self.commit, self.url, self.branch])
 
-@dataclass
-class WithRepoContext:
-    """Stores the context for a withrepo test."""
-    path: str
-    url: str
-    user: str
-    repo: str
-    commit: str
-    branch: str
-    repo_url: str
-    provider: RepoProvider
-    tree: Callable[[bool], Iterator[tuple[str, str]]]
-    languages: list[str]
 
-    @classmethod
-    def from_args(cls, path: str, url: str, args: RepoArguments, tree: Callable[[bool], Iterator[tuple[str, str]]], languages: list[str]):
-        return cls(
-            path=path,
-            url=url,
-            user=args.user,
-            repo=args.repo,
-            commit=args.commit,
-            branch=args.branch,
-            repo_url=args.url,
-            provider=args.provider,
-            tree=tree,
-            languages=languages
-        )
+class RepoContext:
+    def __init__(self, path: str, url: str, args: RepoArguments, lang_groups: list[tuple[str, str]]):
+        """Stores the context for a withrepo test."""
+        self.path = path
+        self.url = url
+        self.user = args.user
+        self.repo = args.repo
+        self.commit = args.commit
+        self.branch = args.branch
+        self.repo_url = args.url
+        self.provider = args.provider
+        self.lang_groups = lang_groups
+        self.languages = list({language for _, language in lang_groups})
 
     def __str__(self):
-        return f"""WithRepoContext(
+        return f"""RepoContext(
             url={self.url},
             user={self.user},
             repo={self.repo},
@@ -97,23 +83,23 @@ class WithRepoContext:
             languages={self.languages},
             path={self.path}
         )"""
-
-def read_file(file_path: str) -> str:
-    """
-    Reads the file at the given path and returns the contents as a string.
-    """
-    encodings = ["utf-8-sig", "utf-16"]
-    try:
-        for encoding in encodings:
-            try:
-                with open(file_path, "r", encoding=encoding) as inp_file:
-                    return inp_file.read()
-            except UnicodeError:
-                continue
-    except Exception:
-        raise Exception("File read failed.") from None
-    raise Exception(f"File read '{file_path}' failed: Unsupported encoding.") from None
-
+    
+    def tree(self, multilang: bool = False) -> Union[Iterator[tuple[str, str]], Iterator[tuple[str, str, str]]]:
+        """
+        Returns a tree of the repository.
+        If multilang is True, the tree will be split by language group.
+        """
+        if not multilang:
+            for root, dirs, files in os.walk(self.path, topdown=True):
+                # Yield full paths relative to the input directory
+                for file in files:
+                    yield (root, os.path.relpath(os.path.join(root, file), self.path))
+        else:
+            for root_dir, language in self.lang_groups:
+                for root, dirs, files in os.walk(root_dir, topdown=True):
+                    # Yield full paths relative to the input directory with the language
+                    for file in files:
+                        yield (root, os.path.relpath(os.path.join(root, file), root_dir), language)
 
 def download_file(url: str, target_path: str) -> None:
     """
@@ -184,19 +170,6 @@ def cleanup(directory: str, root_dirs: list[str]) -> None:
         if os.path.exists(root_dir):
             shutil.rmtree(root_dir)
 
-def _tree(directory: str, multilang: bool = False, root_dirs: list[str] = []) -> Iterator[tuple[str, str]]:
-    if not multilang:
-        for root, dirs, files in os.walk(directory, topdown=True):
-            # Yield full paths relative to the input directory
-            for file in files:
-                yield (root, os.path.relpath(os.path.join(root, file), directory))
-    else:
-        for root_dir, language in root_dirs:
-            for root, dirs, files in os.walk(root_dir, topdown=True):
-                # Yield full paths relative to the input directory with the language
-                for file in files:
-                    yield (root, os.path.relpath(os.path.join(root, file), root_dir), language)
-
 def repo_to_dir(url : str) -> str:
     temp_extract_directory = str(pathlib.Path(WITH_REPO_DIR, uuid4().hex))
     try:
@@ -233,17 +206,16 @@ def parse_repo_arguments_to_download_url(args: RepoArguments) -> str:
         raise Exception("Cannot parse repo() with given arguments")
 
 @contextlib.contextmanager
-def repo(user: str, repo: str, commit: str = "", branch: str = "", url: str = "") -> Iterator[WithRepoContext]:
+def repo(user: str, repo: str, commit: str = "", branch: str = "", url: str = "") -> Iterator[RepoContext]:
+    """
+    TODO
+    """
     args = RepoArguments(user=user, repo=repo, commit=commit, branch=branch, url=url)
     repo_zip_url = parse_repo_arguments_to_download_url(args)
     source_directory_path = repo_to_dir(repo_zip_url)
-    root_dirs = copy_and_split_root_by_language_group(source_directory_path)
-    languages = list({language for _, language in root_dirs})
-
-    def tree(multilang: bool = False):
-        return _tree(source_directory_path, multilang, root_dirs)
-    
-    yield WithRepoContext.from_args(
-        source_directory_path, repo_zip_url, args, tree, languages
+    lang_groups = copy_and_split_root_by_language_group(source_directory_path)
+    yield RepoContext(
+        source_directory_path, repo_zip_url, args, lang_groups
     )
-    cleanup(source_directory_path, [dir for dir, _ in root_dirs])
+    group_dirs = [dir for dir, _ in lang_groups]
+    cleanup(source_directory_path, group_dirs)
