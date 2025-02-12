@@ -14,10 +14,17 @@ Attribution:
 import os
 import shutil
 import tempfile
+from typing import List, Union, Tuple
 
 # Local
-from withrepo.utils import RepoArguments, RepoProvider
-# from withrepo.utils import copy_and_split_root_by_language_group
+from withrepo.utils import(
+    RepoArguments,
+    RepoProvider,
+    LanguageGroup,
+    get_all_paths_from_root_relative,
+    get_language_from_ext,
+    keep_file_for_language,
+)
 
 # Third party
 import httpx
@@ -29,16 +36,60 @@ PROVIDER_TO_URL_MAP = {
     RepoProvider.BITBUCKET: "https://bitbucket.org",
 }
 
-def download_and_extract_archive(url: str, archive_type: str = "zip") -> str:
+def copy_and_split_root_by_language_group(abs_root_path) -> List[LanguageGroup]:
+    abs_paths, _ = get_all_paths_from_root_relative(abs_root_path)
+    languages = set()
+
+    for p in abs_paths:
+        lsp_language, language, is_code = get_language_from_ext(p)
+        if is_code:
+            languages.add(lsp_language)
+    languages = [lang for lang in languages if lang]
+
+    copy_paths = []
+    # copy the root directory into a temporary directory per language
+    for _ in range(len(languages)):
+        tmp_parent_dir = tempfile.mkdtemp(prefix="scope_")
+        shutil.copytree(abs_root_path, tmp_parent_dir, dirs_exist_ok=True)
+        copy_paths.append(tmp_parent_dir)
+
+    for copy_path, language in zip(copy_paths, languages):
+        for root, dirs, files in os.walk(copy_path):
+            for file in files:
+                if keep_file_for_language(root, file, language):
+                    continue
+                else:
+                    # print(f"removing file: {os.path.join(root, file)}")
+                    os.remove(os.path.join(root, file))
+
+    # remove copy_paths that only have directories and no files
+    nonempty_copy_paths = []
+    for copy_path, language in zip(copy_paths, languages):
+        files_set = set()
+        for root, dirs, files in os.walk(copy_path):
+            for file in files:
+                files_set.add(file)
+        if not files_set:
+            # print(f"copy_path: {copy_path} is empty")
+            shutil.rmtree(copy_path)
+            continue
+        nonempty_copy_paths.append(LanguageGroup(language, copy_path))
+
+    return nonempty_copy_paths
+
+def download_and_extract_archive(url: str) -> Tuple[str, List[LanguageGroup]]:
     """
     Downloads the archive from the given URL having format {archive_type} and extracts it to the given {target_path}
     """
     if not url:
         raise Exception(f"withrepo.download_file(): URL is empty")
-    try:
-        extract_directory = tempfile.mkdtemp(prefix="scope_")
-        fd, tmp_file_name = tempfile.mkstemp(prefix="scope_")
+    
+    archive_type = url.split(".")[-1]
+    extract_directory = tempfile.mkdtemp(prefix="scope_")
+    fd, tmp_file_name = tempfile.mkstemp(prefix="scope_")
+    lang_groups = []
 
+    try:
         # Download the archive
         client = httpx.Client(follow_redirects=True)
         with client.stream("GET", url, timeout=60.0) as response:
@@ -52,16 +103,24 @@ def download_and_extract_archive(url: str, archive_type: str = "zip") -> str:
                     f.write(chunk)
 
         # Extract the archive
-        if archive_type in ["zip", "tar", "gztar", "bztar", "xztar"]:
+        if archive_type in {"zip", "tar", "gztar", "bztar", "xztar"}:
             shutil.unpack_archive(tmp_file_name, extract_directory, archive_type)
-            os.remove(tmp_file_name)
         else:
             raise Exception(f"download_and_extract_archive(): Unsupported archive type '{archive_type}'")
-        return extract_directory
+        
+        # Split the archive into language groups
+        lang_groups.extend(copy_and_split_root_by_language_group(extract_directory))
     except Exception as exc:
         raise Exception(
             f"Error extracting archive '{tmp_file_name}' obtained from '{url}': {exc}"
         ) from exc
+    finally:
+        if os.path.exists(tmp_file_name):
+            os.remove(tmp_file_name)
+        # if os.path.exists(extract_directory):
+        #     shutil.rmtree(extract_directory)
+
+    return extract_directory, lang_groups
 
 def parse_repo_arguments_into_download_url(args: RepoArguments) -> str:
     if args.invalid():
