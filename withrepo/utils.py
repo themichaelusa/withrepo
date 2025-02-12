@@ -20,7 +20,6 @@ def is_file_empty(path):
 
 
 # Dtos for downloads
-
 class RepoProvider(Enum):
     GITHUB = "github"
     GITLAB = "gitlab"

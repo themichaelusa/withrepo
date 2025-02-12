@@ -20,7 +20,7 @@ from withrepo.utils import RepoArguments, RepoProvider
 # from withrepo.utils import copy_and_split_root_by_language_group
 
 # Third party
-import requests
+import httpx
 
 # constants
 PROVIDER_TO_URL_MAP = {
@@ -40,14 +40,16 @@ def download_and_extract_archive(url: str, archive_type: str = "zip") -> str:
         fd, tmp_file_name = tempfile.mkstemp(prefix="scope_")
 
         # Download the archive
-        response = requests.get(url, stream=True, timeout=60)
-        if response.status_code != 200:
-            raise requests.exceptions.RequestException(
-                f"Error downloading file '{url}': {response.status_code} {response.text}"
-            )
-        else:
+        client = httpx.Client(follow_redirects=True)
+        with client.stream("GET", url, timeout=60.0) as response:
+            if response.status_code != 200:
+                error_text = response.read().decode()  # Read the response content first
+                raise httpx.RequestError(
+                    f"Error downloading file '{url}': {response.status_code} {error_text}"
+                )
             with os.fdopen(fd, "wb") as f:
-                shutil.copyfileobj(response.raw, f)
+                for chunk in response.iter_raw():
+                    f.write(chunk)
 
         # Extract the archive
         if archive_type in ["zip", "tar", "gztar", "bztar", "xztar"]:
