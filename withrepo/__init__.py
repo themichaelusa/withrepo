@@ -1,8 +1,11 @@
 from withrepo.withrepo import (
     repo,
     RepoContext,
+)
+
+from withrepo.utils import (
+    RepoProvider,
     RepoArguments,
-    RepoProvider
 )
 
 __all__ = ["repo", "RepoContext", "RepoArguments", "RepoProvider"]

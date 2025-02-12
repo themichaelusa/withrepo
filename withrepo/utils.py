@@ -2,6 +2,8 @@
 import os
 import shutil
 import tempfile
+from enum import Enum
+from dataclasses import dataclass
 
 # Local
 from withrepo.resources import EXT_TO_LANGUAGE_DATA
@@ -9,10 +11,35 @@ from withrepo.constants import (
     LANGUAGE_TO_LSP_LANGUAGE_MAP,
 )
 
+# General utils
+def flatten(xss):
+    return [x for xs in xss for x in xs]
+
 def is_file_empty(path):
     return os.stat(path).st_size == 0
 
 
+# Dtos for downloads
+
+class RepoProvider(Enum):
+    GITHUB = "github"
+    GITLAB = "gitlab"
+    BITBUCKET = "bitbucket"
+
+@dataclass
+class RepoArguments:
+    user: str = ""
+    repo: str = ""
+    commit: str = ""
+    url: str = ""
+    branch: str = ""
+    provider: RepoProvider = RepoProvider.GITHUB
+
+    def invalid(self) -> bool:
+        return not any([self.user, self.repo, self.commit, self.url, self.branch])
+
+
+# Codebase segmentation utils
 def get_all_paths_from_root_relative(root_path):
     abs_paths, rel_paths = [], []
     for root, dirs, files in os.walk(root_path):
@@ -87,6 +114,3 @@ def copy_and_split_root_by_language_group(abs_root_path):
         nonempty_copy_paths.append((copy_path, language))
 
     return nonempty_copy_paths
-
-def flatten(xss):
-    return [x for xs in xss for x in xs]
