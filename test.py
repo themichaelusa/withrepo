@@ -13,6 +13,8 @@ from withrepo import repo
 
 # Usage with a specific branch
 with repo("microsoft", "multilspy", branch="codeql") as r:
-    print(r)
-    for t in r.tree(multilang=True):
-        pass
+    print(r.path)
+    for lg in r.lang_groups:
+        print(lg)
+    # for t in r.tree(multilang=False):
+    #     print(t)

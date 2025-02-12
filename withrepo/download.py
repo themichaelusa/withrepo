@@ -75,6 +75,11 @@ def copy_and_split_root_by_language_group(abs_root_path) -> List[LanguageGroup]:
             # print(f"copy_path: {copy_path} is empty")
             shutil.rmtree(copy_path)
             continue
+
+        # TODO: figure out if this screws up with path removal on cleanup
+        child_dirs = os.listdir(copy_path)
+        if len(child_dirs) == 1:
+            copy_path = os.path.join(copy_path, child_dirs[0])
         nonempty_copy_paths.append(LanguageGroup(language, copy_path))
 
     return nonempty_copy_paths
@@ -96,7 +101,7 @@ def download_and_extract_archive(url: str) -> Tuple[str, List[LanguageGroup]]:
         client = httpx.Client(follow_redirects=True, http2=True)
         with client.stream("GET", url, timeout=60.0) as response:
             if response.status_code != 200:
-                error_text = response.read().decode()  # Read the response content first
+                error_text = response.read().decode()
                 raise httpx.RequestError(
                     f"Error downloading file '{url}': {response.status_code} {error_text}"
                 )
@@ -112,6 +117,11 @@ def download_and_extract_archive(url: str) -> Tuple[str, List[LanguageGroup]]:
         
         # Split the archive into language groups
         lang_groups.extend(copy_and_split_root_by_language_group(extract_directory))
+
+        # TODO: figure out if this screws up with path removal on cleanup
+        child_dirs = os.listdir(extract_directory)
+        if len(child_dirs) == 1:
+            extract_directory = os.path.join(extract_directory, child_dirs[0])
     except Exception as exc:
         raise Exception(
             f"Error extracting archive '{tmp_file_name}' obtained from '{url}': {exc}"
