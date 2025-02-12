@@ -15,4 +15,4 @@ from withrepo import repo
 with repo("microsoft", "multilspy", branch="codeql") as r:
     print(r)
     for t in r.tree(multilang=True):
-        print(t)
+        pass

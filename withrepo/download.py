@@ -14,7 +14,7 @@ Attribution:
 import os
 import shutil
 import tempfile
-from typing import List, Union, Tuple
+from typing import List, Tuple
 
 # Local
 from withrepo.utils import(
@@ -30,6 +30,8 @@ from withrepo.utils import(
 import httpx
 
 # constants
+CHUNK_SIZE = 2 * 1024 * 1024
+
 PROVIDER_TO_URL_MAP = {
     RepoProvider.GITHUB: "https://github.com",
     RepoProvider.GITLAB: "https://gitlab.com",
@@ -91,7 +93,7 @@ def download_and_extract_archive(url: str) -> Tuple[str, List[LanguageGroup]]:
 
     try:
         # Download the archive
-        client = httpx.Client(follow_redirects=True)
+        client = httpx.Client(follow_redirects=True, http2=True)
         with client.stream("GET", url, timeout=60.0) as response:
             if response.status_code != 200:
                 error_text = response.read().decode()  # Read the response content first
@@ -99,9 +101,9 @@ def download_and_extract_archive(url: str) -> Tuple[str, List[LanguageGroup]]:
                     f"Error downloading file '{url}': {response.status_code} {error_text}"
                 )
             with os.fdopen(fd, "wb") as f:
-                for chunk in response.iter_raw():
+                for chunk in response.iter_raw(chunk_size=CHUNK_SIZE):
                     f.write(chunk)
-
+        
         # Extract the archive
         if archive_type in {"zip", "tar", "gztar", "bztar", "xztar"}:
             shutil.unpack_archive(tmp_file_name, extract_directory, archive_type)
