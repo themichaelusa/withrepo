@@ -6,3 +6,7 @@ __pycache__
 
 # UV
 .venv
+
+
+# Pytest
+.pytest_cache

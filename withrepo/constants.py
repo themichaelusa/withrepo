@@ -1,4 +1,3 @@
-
 # TODO: Artifact from scope, remove eventually when API is stable
 LANGUAGE_TO_LSP_LANGUAGE_MAP = {
     "python": "python",

@@ -273,7 +273,7 @@ VENDOR_PATTERNS = [
     "(^|/)\.github/",
     # Environments
     "(^|/)venv/",
-    "(^|/)env/" "(^|/)ENV/" "(^|/)env\.bak/" "(^|/)venv\.bak/",
+    "(^|/)env/(^|/)ENV/(^|/)env\.bak/(^|/)venv\.bak/",
     # Lock Files (NPM, Yarn, PNPM, etc.)
     "(^|/)package-lock\.json",
     "(^|/)yarn\.lock",

@@ -17,7 +17,7 @@ import tempfile
 from typing import List, Tuple
 
 # Local
-from withrepo.utils import(
+from withrepo.utils import (
     RepoArguments,
     RepoProvider,
     LanguageGroup,
@@ -37,6 +37,7 @@ PROVIDER_TO_URL_MAP = {
     RepoProvider.GITLAB: "https://gitlab.com",
     RepoProvider.BITBUCKET: "https://bitbucket.org",
 }
+
 
 def copy_and_split_root_by_language_group(abs_root_path) -> List[LanguageGroup]:
     abs_paths, _ = get_all_paths_from_root_relative(abs_root_path)
@@ -84,13 +85,14 @@ def copy_and_split_root_by_language_group(abs_root_path) -> List[LanguageGroup]:
 
     return nonempty_copy_paths
 
+
 def download_and_extract_archive(url: str) -> Tuple[str, List[LanguageGroup]]:
     """
     Downloads the archive from the given URL having format {archive_type} and extracts it to the given {target_path}
     """
     if not url:
-        raise Exception(f"withrepo.download_file(): URL is empty")
-    
+        raise Exception("withrepo.download_file(): URL is empty")
+
     archive_type = url.split(".")[-1]
     extract_directory = tempfile.mkdtemp(prefix="scope_")
     fd, tmp_file_name = tempfile.mkstemp(prefix="scope_")
@@ -108,13 +110,15 @@ def download_and_extract_archive(url: str) -> Tuple[str, List[LanguageGroup]]:
             with os.fdopen(fd, "wb") as f:
                 for chunk in response.iter_raw(chunk_size=CHUNK_SIZE):
                     f.write(chunk)
-        
+
         # Extract the archive
         if archive_type in {"zip", "tar", "gztar", "bztar", "xztar"}:
             shutil.unpack_archive(tmp_file_name, extract_directory, archive_type)
         else:
-            raise Exception(f"download_and_extract_archive(): Unsupported archive type '{archive_type}'")
-        
+            raise Exception(
+                f"download_and_extract_archive(): Unsupported archive type '{archive_type}'"
+            )
+
         # Split the archive into language groups
         lang_groups.extend(copy_and_split_root_by_language_group(extract_directory))
 
@@ -133,6 +137,7 @@ def download_and_extract_archive(url: str) -> Tuple[str, List[LanguageGroup]]:
         #     shutil.rmtree(extract_directory)
 
     return extract_directory, lang_groups
+
 
 def parse_repo_arguments_into_download_url(args: RepoArguments) -> str:
     if args.invalid():

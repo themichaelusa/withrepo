@@ -10,9 +10,11 @@ from withrepo.constants import (
     LANGUAGE_TO_LSP_LANGUAGE_MAP,
 )
 
+
 # General utils
 def flatten(xss):
     return [x for xs in xss for x in xs]
+
 
 def is_file_empty(path):
     return os.stat(path).st_size == 0
@@ -23,6 +25,7 @@ class RepoProvider(Enum):
     GITHUB = "github"
     GITLAB = "gitlab"
     BITBUCKET = "bitbucket"
+
 
 @dataclass
 class RepoArguments:
@@ -35,12 +38,14 @@ class RepoArguments:
 
     def invalid(self) -> bool:
         return not any([self.user, self.repo, self.commit, self.url, self.branch])
-    
+
+
 @dataclass
 class LanguageGroup:
     language: str
     path: str
     # files: List[str]
+
 
 # Codebase segmentation utils
 def get_all_paths_from_root_relative(root_path):
