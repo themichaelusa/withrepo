@@ -6,8 +6,40 @@ from typing import Iterator, Tuple, List, Union
 
 # Local
 from withrepo.utils import RepoArguments, LanguageGroup
-from withrepo.download import parse_repo_arguments_into_download_url, download_and_extract_archive
+from withrepo.download import (
+    parse_repo_arguments_into_download_url,
+    download_and_extract_archive
+)
+from withrepo.utils import get_language_from_ext
 
+class RepoFile:
+    def __init__(self, abs_path: str, relative_path: str):
+        self.abs_path = abs_path
+        self.relative_path = relative_path
+        self._contents = None
+        _, language, is_code = get_language_from_ext(abs_path)
+        self.language = language
+        self.is_code = is_code
+
+    def contents(self) -> str:
+        if self._contents is None:
+            with open(self.abs_path, "r") as f:
+                self._contents = f.read()
+        return self._contents
+    
+    def __len__(self) -> int:
+        return len(self.contents().split("\n"))
+    
+    def __str__(self) -> str:
+        return f"""RepoFile(
+            relative_path={self.relative_path},
+            language={self.language},
+            is_code={self.is_code},
+            num_lines={len(self)}
+        )"""
+    
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.contents().split("\n"))
 
 class RepoContext:
     def __init__(self, path: str, url: str, args: RepoArguments, lang_groups: List[LanguageGroup]):
@@ -41,16 +73,20 @@ class RepoContext:
         If multilang is True, the tree will be split by language group.
         """
         if not multilang:
-            for root, dirs, files in os.walk(self.path, topdown=True):
+            for root, _, files in os.walk(self.path, topdown=True):
                 # Yield full paths relative to the input directory
                 for file in files:
-                    yield (root, os.path.relpath(os.path.join(root, file), self.path))
+                    relpath = os.path.relpath(os.path.join(root, file), self.path)
+                    abspath = os.path.abspath(os.path.join(root, file))
+                    yield RepoFile(abspath, relpath)
         else:
             for lang_group in self.lang_groups:
-                for root, dirs, files in os.walk(lang_group.path, topdown=True):
+                for root, _, files in os.walk(lang_group.path, topdown=True):
                     # Yield full paths relative to the input directory with the language
                     for file in files:
-                        yield (root, os.path.relpath(os.path.join(root, file), lang_group.path), lang_group.language)
+                        relpath = os.path.relpath(os.path.join(root, file), lang_group.path)
+                        abspath = os.path.abspath(os.path.join(root, file))
+                        yield RepoFile(abspath, relpath)
 
 @contextlib.contextmanager
 def repo(user: str, repo: str, commit: str = "", branch: str = "", url: str = "") -> Iterator[RepoContext]:

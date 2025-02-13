@@ -2,6 +2,8 @@
 import os
 from enum import Enum
 from dataclasses import dataclass
+from typing import Tuple
+
 # Local
 from withrepo.resources import EXT_TO_LANGUAGE_DATA
 from withrepo.constants import (
@@ -52,7 +54,7 @@ def get_all_paths_from_root_relative(root_path):
     return abs_paths, rel_paths
 
 
-def get_language_from_ext(path):
+def get_language_from_ext(path) -> Tuple[str, str, bool]:
     root, ext = os.path.splitext(path)
     language_info = EXT_TO_LANGUAGE_DATA.get(ext, {})
     is_code = language_info.get("is_code", False)
