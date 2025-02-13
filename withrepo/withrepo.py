@@ -5,7 +5,7 @@ import contextlib
 from typing import Iterator, Tuple, List, Union
 
 # Local
-from withrepo.utils import RepoArguments, LanguageGroup
+from withrepo.utils import RepoArguments, LanguageGroup, RepoProvider
 from withrepo.download import (
     parse_repo_arguments_into_download_url,
     download_and_extract_archive,
@@ -99,12 +99,12 @@ class RepoContext:
 
 @contextlib.contextmanager
 def repo(
-    user: str, repo: str, commit: str = "", branch: str = "", url: str = ""
+    user: str, repo: str, commit: str = "", branch: str = "", url: str = "", provider: RepoProvider = RepoProvider.GITHUB
 ) -> Iterator[RepoContext]:
     """
     TODO
     """
-    args = RepoArguments(user=user, repo=repo, commit=commit, branch=branch, url=url)
+    args = RepoArguments(user=user, repo=repo, commit=commit, branch=branch, url=url, provider=provider)
     repo_zip_url = parse_repo_arguments_into_download_url(args)
     source_directory_path, lang_groups = download_and_extract_archive(repo_zip_url)
     yield RepoContext(source_directory_path, repo_zip_url, args, lang_groups)

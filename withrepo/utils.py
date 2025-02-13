@@ -34,7 +34,7 @@ class RepoArguments:
     commit: str = ""
     url: str = ""
     branch: str = ""
-    provider: RepoProvider = RepoProvider.GITHUB
+    provider: RepoProvider = None
 
     def invalid(self) -> bool:
         return not any([self.user, self.repo, self.commit, self.url, self.branch])

@@ -139,6 +139,16 @@ def download_and_extract_archive(url: str) -> Tuple[str, List[LanguageGroup]]:
     return extract_directory, lang_groups
 
 
+### TODO
+# GITLAB default clone
+# https://gitlab.com/NTPsec/ntpsec/-/archive/master/ntpsec-master.zip
+
+# GITLAB commit clone
+# https://gitlab.com/NTPsec/ntpsec/-/archive/f282438ee3875330d82877975adbf7a096b06f73/ntpsec-f282438ee3875330d82877975adbf7a096b06f73.zip
+
+# GITLAB branch clone
+# https://gitlab.com/NTPsec/ntpsec/-/archive/mr_1415/ntpsec-mr_1415.zip
+
 def parse_repo_arguments_into_download_url(args: RepoArguments) -> str:
     if args.invalid():
         raise Exception("Cannot parse repo() without arguments")
@@ -146,6 +156,8 @@ def parse_repo_arguments_into_download_url(args: RepoArguments) -> str:
     # at minimum, either url or (user, repo) must be provided
     if args.url:
         if not args.commit:
+            # if args.provider == RepoProvider.GITLAB:
+            #     return f"{provider_url}/{args.user}/{args.repo}/-/raw/HEAD/archive.zip"
             return f"{args.url}/archive/HEAD.zip"
         else:
             return f"{args.url}/archive/{args.commit}.zip"
