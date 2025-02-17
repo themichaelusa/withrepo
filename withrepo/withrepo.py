@@ -2,7 +2,8 @@
 import os
 import shutil
 import contextlib
-from typing import Iterator, Tuple, List, Union
+from typing import Iterator, List, Union, Dict
+from collections import defaultdict
 
 # Local
 from withrepo.utils import RepoArguments, LanguageGroup, RepoProvider
@@ -73,28 +74,34 @@ class RepoContext:
 
     def tree(
         self, multilang: bool = False
-    ) -> Union[Iterator[Tuple[str, str]], Iterator[Tuple[str, str, str]]]:
+    ) -> Union[List[RepoFile], Dict[str, List[RepoFile]]]:
         """
         Returns a tree of the repository.
-        If multilang is True, the tree will be split by language group.
+        If multilang is False, returns a list of RepoFiles.
+        If multilang is True, returns a dict mapping languages to lists of RepoFiles.
         """
         if not multilang:
-            for root, _, files in os.walk(self.path, topdown=True):
-                # Yield full paths relative to the input directory
-                for file in files:
+            files = []
+            for root, _, files_list in os.walk(self.path, topdown=True):
+                # Collect full paths relative to the input directory
+                for file in files_list:
                     relpath = os.path.relpath(os.path.join(root, file), self.path)
                     abspath = os.path.abspath(os.path.join(root, file))
-                    yield RepoFile(abspath, relpath)
+                    files.append(RepoFile(abspath, relpath))
+            return files
         else:
+            lang_trees = defaultdict(list)
             for lang_group in self.lang_groups:
-                for root, _, files in os.walk(lang_group.path, topdown=True):
-                    # Yield full paths relative to the input directory with the language
+                lang_tree = list(os.walk(lang_group.path, topdown=True))
+                tree_files_and_root = [(root, files) for root, _, files in lang_tree]
+                for root, files in tree_files_and_root:
                     for file in files:
                         relpath = os.path.relpath(
                             os.path.join(root, file), lang_group.path
                         )
                         abspath = os.path.abspath(os.path.join(root, file))
-                        yield RepoFile(abspath, relpath)
+                        lang_trees[lang_group.language].append(RepoFile(abspath, relpath))
+            return lang_trees
 
 
 @contextlib.contextmanager
