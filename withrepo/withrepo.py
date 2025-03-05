@@ -16,14 +16,14 @@ from withrepo.utils import get_language_from_ext
 
 class RepoFile:
     def __init__(self, abs_path: str, relative_path: str, preload: bool = False):
-        self.abs_path : str = abs_path
-        self.relative_path : str = relative_path
-        self._contents : str = None
+        self.abs_path: str = abs_path
+        self.relative_path: str = relative_path
+        self._contents: str = None
         if preload:
             self.contents()
         _, language, is_code = get_language_from_ext(abs_path)
-        self.language : str = language
-        self.is_code : bool = is_code
+        self.language: str = language
+        self.is_code: bool = is_code
 
     def contents(self) -> str:
         try:
@@ -55,19 +55,21 @@ class RepoContext:
         self, path: str, url: str, args: RepoArguments, lang_groups: List[LanguageGroup]
     ):
         """Stores the context for a withrepo test."""
-        self.path : str = path
-        self.url : str = url
-        self.user : str = args.user
-        self.repo : str = args.repo
-        self.commit : str = args.commit
-        self.branch : str = args.branch
-        self.repo_url : str = args.url
-        self.provider : RepoProvider = args.provider
-        self.lang_groups : List[LanguageGroup] = lang_groups
-        self.languages : List[str] = list({lang_group.language for lang_group in lang_groups})
-        
-        self.files : List[RepoFile] = []
-        self.lang_trees : Dict[str, List[RepoFile]] = {}
+        self.path: str = path
+        self.url: str = url
+        self.user: str = args.user
+        self.repo: str = args.repo
+        self.commit: str = args.commit
+        self.branch: str = args.branch
+        self.repo_url: str = args.url
+        self.provider: RepoProvider = args.provider
+        self.lang_groups: List[LanguageGroup] = lang_groups
+        self.languages: List[str] = list(
+            {lang_group.language for lang_group in lang_groups}
+        )
+
+        self.files: List[RepoFile] = []
+        self.lang_trees: Dict[str, List[RepoFile]] = {}
 
     def __str__(self):
         return f"""RepoContext(
@@ -117,7 +119,7 @@ class RepoContext:
             if store:
                 self.lang_trees = lang_trees
             return lang_trees
-        
+
     def cleanup(self, log: bool = False):
         if log:
             print(f"RepoContext::cleanup() Cleaning up {self.path}")
@@ -130,7 +132,6 @@ class RepoContext:
                 shutil.rmtree(lang_group.path)
 
 
-
 @contextlib.contextmanager
 def repo(
     user: str,
@@ -139,8 +140,8 @@ def repo(
     branch: str = "",
     url: str = "",
     provider: RepoProvider = RepoProvider.GITHUB,
-    cleanup_callback : bool = False,
-    log : bool = False
+    cleanup_callback: bool = False,
+    log: bool = False,
 ) -> Iterator[RepoContext]:
     """
     TODO

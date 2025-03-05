@@ -1,4 +1,4 @@
-from withrepo import repo, RepoProvider
+from withrepo import repo
 
 # Basic usage
 # with repo("microsoft", "multilspy") as r:
