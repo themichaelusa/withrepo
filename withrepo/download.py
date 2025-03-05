@@ -149,6 +149,7 @@ def download_and_extract_archive(url: str) -> Tuple[str, List[LanguageGroup]]:
 # GITLAB branch clone
 # https://gitlab.com/NTPsec/ntpsec/-/archive/mr_1415/ntpsec-mr_1415.zip
 
+
 def parse_repo_arguments_into_download_url(args: RepoArguments) -> str:
     if args.invalid():
         raise Exception("Cannot parse repo() without arguments")

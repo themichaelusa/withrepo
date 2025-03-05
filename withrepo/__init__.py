@@ -1,6 +1,7 @@
 from withrepo.withrepo import (
     repo,
     RepoContext,
+    RepoFile,
 )
 
 from withrepo.utils import (
@@ -15,6 +16,7 @@ from withrepo.download import (
 __all__ = [
     "repo",
     "RepoContext",
+    "RepoFile",
     "RepoArguments",
     "RepoProvider",
     "copy_and_split_root_by_language_group",
