@@ -17,6 +17,7 @@ __all__ = [
     "repo",
     "RepoContext",
     "RepoFile",
+    "File",
     "RepoArguments",
     "RepoProvider",
     "copy_and_split_root_by_language_group",

@@ -218,8 +218,8 @@ class RepoContext:
 
 @contextlib.contextmanager
 def repo(
-    user: str,
-    repo: str,
+    user: str = None,
+    repo: str = None,
     commit: str = "",
     branch: str = "",
     url: str = "",
@@ -230,7 +230,6 @@ def repo(
     timeit: bool = False,
     log: bool = False,
 ) -> Iterator[RepoContext]:
-
     args = RepoArguments(
         user=user,
         repo=repo,
@@ -241,6 +240,9 @@ def repo(
         root_dir=root_dir,
         root_path=root_path,
     )
+
+    if args.invalid():
+        raise ValueError("Invalid repo arguments")
 
     if not root_path:
         repo_zip_url = parse_repo_arguments_into_download_url(args)
@@ -253,5 +255,5 @@ def repo(
     repo_ctx = RepoContext(source_directory_path, repo_zip_url, args, lang_groups)
     yield repo_ctx
 
-    if not cleanup_callback:
+    if not root_path and not cleanup_callback:
         repo_ctx.cleanup(log=log)

@@ -39,7 +39,9 @@ class RepoArguments:
     root_path: str = None
 
     def invalid(self) -> bool:
-        return not any([self.user, self.repo, self.commit, self.url, self.branch, self.root_path])
+        return not any(
+            [self.user, self.repo, self.commit, self.url, self.branch, self.root_path]
+        )
 
 
 @dataclass
@@ -83,6 +85,7 @@ def keep_file_for_language(root, file, language):
     #     case _:
     #         return False
 
+
 def copy_and_split_root_by_language_group(abs_root_path) -> List[LanguageGroup]:
     abs_paths, _ = get_all_paths_from_root_relative(abs_root_path)
     languages = set()
@@ -97,6 +100,7 @@ def copy_and_split_root_by_language_group(abs_root_path) -> List[LanguageGroup]:
     # copy the root directory into a temporary directory per language
     for _ in range(len(languages)):
         tmp_parent_dir = tempfile.mkdtemp(prefix="scope_")
+        print(f"Copying {abs_root_path} to {tmp_parent_dir}")
         shutil.copytree(abs_root_path, tmp_parent_dir, dirs_exist_ok=True)
         copy_paths.append(tmp_parent_dir)
 

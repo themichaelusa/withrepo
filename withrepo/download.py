@@ -36,6 +36,7 @@ PROVIDER_TO_URL_MAP = {
     RepoProvider.BITBUCKET: "https://bitbucket.org",
 }
 
+
 def download_and_extract_archive(url: str) -> Tuple[str, List[LanguageGroup]]:
     """
     Downloads the archive from the given URL having format {archive_type} and extracts it to the given {target_path}
