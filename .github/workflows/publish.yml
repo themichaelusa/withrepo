@@ -1,0 +1,52 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'  # Example: v0.2.2
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/withrepo
+    permissions:
+      contents: read
+      id-token: write # Required for PyPi Trusted Publisher Management
+    steps:
+      - uses: actions/checkout@v4
+    
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Define a cache dependency glob
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      
+      - name: Install the project
+        run: uv sync --all-extras --dev
+
+      # - name: Run tests
+      #   # For example, using `pytest`
+      #   run: uv run pytest tests
+
+      - name: Build the project
+        run: uv build
+
+      - name: Minimize uv cache
+        run: uv cache prune --ci
+
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.12.3
