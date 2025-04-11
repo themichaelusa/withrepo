@@ -1,5 +1,5 @@
 # withrepo
-
+Pythonic access to git repositories
 
 ## TODO
 
