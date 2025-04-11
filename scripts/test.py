@@ -16,7 +16,6 @@ with repo("microsoft", "multilspy", branch="codeql") as r:
     for t in r.tree(multilang=True):
         print(t)
 
-
 # Usage with gitlab
 # with repo("NTPsec", "ntpsec", provider=RepoProvider.GITLAB) as r:
 #     # for lg in r.lang_groups:
