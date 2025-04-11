@@ -1,8 +1,19 @@
 [project]
 name = "withrepo"
-version = "0.2.0"
+version = "0.2.1"
 description = "Pythonic access to git repositories"
+authors = [
+  {name = "Michael Usachenko", email = "michael@useadrenaline.com"},
+]
+maintainers = [
+  {name = "Michael Usachenko", email = "michael@useadrenaline.com"},
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python"
+]
 readme = "README.md"
+license = {file = "LICENSE"}
 requires-python = ">=3.12"
 dependencies = [
     "httpx[http2]>=0.28.1",
@@ -13,3 +24,16 @@ dev = [
     "pytest>=8.3.4",
     "ruff>=0.9.6",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+packages = ["withrepo"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["withrepo"]
+
+[project.urls]
+repository = "https://github.com/themichaelusa/withrepo"
