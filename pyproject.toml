@@ -1,6 +1,6 @@
 [project]
 name = "withrepo"
-version = "0.2.1"
+version = "0.2.3"
 description = "Pythonic access to git repositories"
 authors = [
   {name = "Michael Usachenko", email = "michael@useadrenaline.com"},
@@ -14,7 +14,7 @@ classifiers = [
 ]
 readme = "README.md"
 license = {file = "LICENSE"}
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "httpx[http2]>=0.28.1",
 ]
