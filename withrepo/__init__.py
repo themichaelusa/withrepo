@@ -2,6 +2,7 @@ from withrepo.withrepo import (
     repo,
     RepoContext,
     RepoFile,
+    File,
 )
 
 from withrepo.utils import (

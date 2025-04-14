@@ -253,7 +253,7 @@ wheels = [
 
 [[package]]
 name = "withrepo"
-version = "0.2.2"
+version = "0.2.4"
 source = { editable = "." }
 dependencies = [
     { name = "httpx", extra = ["http2"] },

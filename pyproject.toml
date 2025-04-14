@@ -1,6 +1,6 @@
 [project]
 name = "withrepo"
-version = "0.2.3"
+version = "0.2.4"
 description = "Pythonic access to git repositories"
 authors = [
   {name = "Michael Usachenko", email = "michael@useadrenaline.com"},
